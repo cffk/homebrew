@@ -1,14 +1,12 @@
-require "formula"
-
 class Emscripten < Formula
-  homepage "http://emscripten.org"
-  url "https://github.com/kripken/emscripten/archive/1.26.0.tar.gz"
-  sha1 "6a0ca118d7ee75743e2bbe287446aaa6526d8016"
+  homepage "https://kripken.github.io/emscripten-site/"
+  url "https://github.com/kripken/emscripten/archive/1.29.6.tar.gz"
+  sha1 "fa8fe3c844b7b1f9b4afd928c2f6f083843be69b"
 
   bottle do
-    sha1 "8441e594986a8e78b586654673f9314f2fecb41e" => :yosemite
-    sha1 "412e1f67594b9aa482fefb8642c42678ee96b30b" => :mavericks
-    sha1 "87d6bb592ed7e118483e3195767acd2caf50ce2d" => :mountain_lion
+    sha1 "e0cfe1c9d8bc969814281c2d8dffe2323d750259" => :yosemite
+    sha1 "39cf18caf1c8483fe0fa9d86dc42652544972b41" => :mavericks
+    sha1 "ecf68dab9122422f61d8dbec3023e0df5d562b17" => :mountain_lion
   end
 
   head do
@@ -25,15 +23,17 @@ class Emscripten < Formula
 
   stable do
     resource "fastcomp" do
-      url "https://github.com/kripken/emscripten-fastcomp/archive/1.26.0.tar.gz"
-      sha1 "dc15fc8ace2cd60540244610e3a8f30d270c6cf7"
+      url "https://github.com/kripken/emscripten-fastcomp/archive/1.29.6.tar.gz"
+      sha1 "e4243795347b641367c330867a097c0616f2553e"
     end
 
     resource "fastcomp-clang" do
-      url "https://github.com/kripken/emscripten-fastcomp-clang/archive/1.26.0.tar.gz"
-      sha1 "4d622e70777ad074f6b1b6171806963e9feb988a"
+      url "https://github.com/kripken/emscripten-fastcomp-clang/archive/1.29.6.tar.gz"
+      sha1 "c1f61a952898f199a024a550a520abf1babe4aff"
     end
   end
+
+  needs :cxx11
 
   depends_on :python if MacOS.version <= :snow_leopard
   depends_on "node"
@@ -41,6 +41,7 @@ class Emscripten < Formula
   depends_on "yuicompressor"
 
   def install
+    ENV.cxx11
     # OSX doesn't provide a "python2" binary so use "python" instead.
     python2_shebangs = `grep --recursive --files-with-matches ^#!/usr/bin/.*python2$ #{buildpath}`
     python2_shebang_files = python2_shebangs.lines.sort.uniq
@@ -65,10 +66,6 @@ class Emscripten < Formula
     ]
 
     cd "fastcomp" do
-      # Fix for parsing Mac OS X version numbers >= 10.10
-      # https://groups.google.com/forum/#!msg/emscripten-discuss/8gb88R5eyqs/p9_82Wi2pSAJ
-      inreplace "Makefile.rules", '10.([0-9])', '10.([0-9]+)'
-      inreplace "Makefile.rules", '(10.[0-9])', '(10.[0-9]+)'
       system "./configure", *args
       system "make"
       system "make", "install"

@@ -3,8 +3,8 @@ require "formula"
 class RubyBuild < Formula
   head "https://github.com/sstephenson/ruby-build.git"
   homepage "https://github.com/sstephenson/ruby-build"
-  url "https://github.com/sstephenson/ruby-build/archive/v20141028.tar.gz"
-  sha1 "89995bbdd9bb009cd9be2f6c1e76b5d8a28e8291"
+  url "https://github.com/sstephenson/ruby-build/archive/v20150303.tar.gz"
+  sha1 "c15c1f6613d6c518544ed0d90a0cf33eefc7d73f"
 
   depends_on "autoconf" => [:recommended, :run]
   depends_on "pkg-config" => [:recommended, :run]

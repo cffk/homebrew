@@ -4,18 +4,14 @@ class Mpd < Formula
   homepage "http://www.musicpd.org/"
 
   stable do
-    url "http://www.musicpd.org/download/mpd/0.19/mpd-0.19.2.tar.xz"
-    sha1 "47616949d1617f467c31fb10df8ddd5a5c4ddc84"
-
-    # Fixes build with non-Apple GCCs; merged upstream:
-    # http://git.musicpd.org/cgit/master/mpd.git/commit/?h=v0.19.x&id=134cb6a0171192b7d621697f84196ce670a3ce21
-    patch :DATA
+    url "http://www.musicpd.org/download/mpd/0.19/mpd-0.19.9.tar.xz"
+    sha1 "6683bee5f132eda318c5a61ec14b2df8d9164d60"
   end
 
   bottle do
-    sha1 "340893f88af321175dfff63b0164456959f1a90a" => :yosemite
-    sha1 "6816566d491c035147eda988e863ff0bddd6eecf" => :mavericks
-    sha1 "e26e220b20242f44332dae75e98d7ddfe715b59e" => :mountain_lion
+    sha1 "dded981259ff9d3529b311f8fd48f3713a4e5811" => :yosemite
+    sha1 "8b2252c6fb581ed97ea95d16b953b1a64d0c6f02" => :mavericks
+    sha1 "2a3c681188f7db786f61b053aa0813549838718a" => :mountain_lion
   end
 
   head do
@@ -29,9 +25,11 @@ class Mpd < Formula
   option "with-lame", "Build with lame support (for MP3 encoding when streaming)"
   option "with-two-lame", "Build with two-lame support (for MP2 encoding when streaming)"
   option "with-flac", "Build with flac support (for Flac encoding when streaming)"
-  option "with-vorbis", "Build with vorbis support (for Ogg encoding)"
+  option "with-libvorbis", "Build with vorbis support (for Ogg encoding)"
   option "with-yajl", "Build with yajl support (for playing from soundcloud)"
   option "with-opus", "Build with opus support (for Opus encoding and decoding)"
+
+  deprecated_option "with-vorbis" => "with-libvorbis"
 
   depends_on "pkg-config" => :build
   depends_on "boost" => :build
@@ -59,8 +57,7 @@ class Mpd < Formula
   depends_on "libzzip" => :optional     # Reading from within ZIPs
   depends_on "yajl" => :optional        # JSON library for SoundCloud
   depends_on "opus" => :optional        # Opus support
-
-  depends_on "libvorbis" if build.with? "vorbis" # Vorbis support
+  depends_on "libvorbis" => :optional
 
   def install
     # mpd specifies -std=gnu++0x, but clang appears to try to build
@@ -88,7 +85,7 @@ class Mpd < Formula
     args << "--enable-lastfm" if build.with? "lastfm"
     args << "--disable-lame-encoder" if build.without? "lame"
     args << "--disable-soundcloud" if build.without? "yajl"
-    args << "--enable-vorbis-encoder" if build.with? "vorbis"
+    args << "--enable-vorbis-encoder" if build.with? "libvorbis"
 
     system "./configure", *args
     system "make"
@@ -121,27 +118,3 @@ class Mpd < Formula
     EOS
   end
 end
-
-__END__
-diff --git a/src/Main.cxx b/src/Main.cxx
-index 2719c05..26d4e7a 100644
---- a/src/Main.cxx
-+++ b/src/Main.cxx
-@@ -114,7 +114,7 @@
- #include <ws2tcpip.h>
- #endif
- 
--#ifdef __APPLE__
-+#ifdef __BLOCKS__
- #include <dispatch/dispatch.h>
- #endif
- 
-@@ -517,7 +517,7 @@ int mpd_main(int argc, char *argv[])
- 	daemonize_begin(options.daemon);
- #endif
- 
--#ifdef __APPLE__
-+#ifdef __BLOCKS__
- 	/* Runs the OS X native event loop in the main thread, and runs
- 	   the rest of mpd_main on a new thread. This lets CoreAudio receive
- 	   route change notifications (e.g. plugging or unplugging headphones).

@@ -1,23 +1,38 @@
-require "formula"
-
 class Ansible < Formula
   homepage "http://www.ansible.com/home"
-  url "http://releases.ansible.com/ansible/ansible-1.7.2.tar.gz"
-  sha1 "21532ce402e08c91cc64c5e655758574af9fc8f3"
+  url "http://releases.ansible.com/ansible/ansible-1.8.4.tar.gz"
+  sha1 "74be0c102506d14940bc76f5c5659618368c41ec"
 
   head "https://github.com/ansible/ansible.git", :branch => "devel"
 
   bottle do
-    sha1 "97822f76a9c9650473fff0cd725bfa546bb84442" => :mavericks
-    sha1 "dcc7cf4b6272707d95505a2c2c2f1b9b051f1b76" => :mountain_lion
-    sha1 "5f9f3b109a31ccf5d7d64a16338d635d974b1648" => :lion
+    sha1 "ded64af2f1dd1ea01884ca4d45af6d2d3f797328" => :yosemite
+    sha1 "e0b1936ec56959804e55d5fcfd3f412d2c016c59" => :mavericks
+    sha1 "608835ce4a22a70da5442d4b021a86537dc5ba0c" => :mountain_lion
   end
 
   depends_on :python if MacOS.version <= :snow_leopard
   depends_on "libyaml"
 
-  option "with-accelerate", "Enable accelerated mode"
-  option "with-windows", "Enable Windows support"
+  resource "docker-py" do
+    url "https://pypi.python.org/packages/source/d/docker-py/docker-py-0.6.0.tar.gz"
+    sha1 "01eb7b2cd1a607d361170041b973a0e36bb1be42"
+  end
+
+  resource "requests" do
+    url "https://pypi.python.org/packages/source/r/requests/requests-2.5.1.tar.gz"
+    sha1 "f906c441be2f0e7a834cbf701a72788d3ac3d144"
+  end
+
+  resource "websocket-client" do
+    url "https://pypi.python.org/packages/source/w/websocket-client/websocket-client-0.11.0.tar.gz"
+    sha1 "a38cb6072a25b18faf11d31dd415750692c36f33"
+  end
+
+  resource "six" do
+    url "https://pypi.python.org/packages/source/s/six/six-1.8.0.tar.gz"
+    sha1 "aa3b0659cbc85c6c7a91efc51f2d1007040070cd"
+  end
 
   resource "pycrypto" do
     url "https://pypi.python.org/packages/source/p/pycrypto/pycrypto-2.6.tar.gz"
@@ -25,8 +40,8 @@ class Ansible < Formula
   end
 
   resource "boto" do
-    url "https://pypi.python.org/packages/source/b/boto/boto-2.32.1.tar.gz"
-    sha1 "4fdecde66245b7fc0295e22d2c2d3c9b08c2b1fa"
+    url "https://pypi.python.org/packages/source/b/boto/boto-2.36.0.tar.gz"
+    sha1 "f230ff9b041d3b43244086e38b7b6029450898be"
   end
 
   resource "pyyaml" do
@@ -49,9 +64,14 @@ class Ansible < Formula
     sha1 "a9b24d887f2be772921b3ee30a0b9d435cffadda"
   end
 
+  resource "pyasn1" do
+    url "https://pypi.python.org/packages/source/p/pyasn1/pyasn1-0.1.7.tar.gz"
+    sha1 "e32b91c5a5d9609fb1d07d8685a884bab22ca6d0"
+  end
+
   resource "python-keyczar" do
-    url "https://pypi.python.org/packages/source/p/python-keyczar/python-keyczar-0.71b.tar.gz"
-    sha1 "20c7c5d54c0ce79262092b4cc691aa309fb277fa"
+    url "https://pypi.python.org/packages/source/p/python-keyczar/python-keyczar-0.71c.tar.gz"
+    sha1 "0ac1e85e05acac470029d1eaeece5c47d59fcc89"
   end
 
   resource "pywinrm" do
@@ -74,10 +94,13 @@ class Ansible < Formula
     ENV.prepend_create_path "PYTHONPATH", libexec/"lib/python2.7/site-packages"
 
     res = %w[pycrypto boto pyyaml paramiko markupsafe jinja2]
-    res << "python-keyczar" if build.with? "accelerate"
-    res += %w[pywinrm isodate xmltodict] if build.with? "windows"
+    res += %w[isodate xmltodict pywinrm] # windows support
+    res += %w[six requests websocket-client docker-py] # docker support
+    res += %w[pyasn1 python-keyczar] # accelerate support
     res.each do |r|
-      resource(r).stage { Language::Python.setup_install "python", libexec/"vendor" }
+      resource(r).stage do
+        system "python", *Language::Python.setup_install_args(libexec/"vendor")
+      end
     end
 
     inreplace "lib/ansible/constants.py" do |s|
@@ -85,7 +108,7 @@ class Ansible < Formula
       s.gsub! "/etc/ansible", etc/"ansible"
     end
 
-    Language::Python.setup_install "python", libexec
+    system "python", *Language::Python.setup_install_args(libexec)
 
     man1.install Dir["docs/man/man1/*.1"]
     bin.install Dir["#{libexec}/bin/*"]
@@ -93,6 +116,16 @@ class Ansible < Formula
   end
 
   test do
-    system "#{bin}/ansible", "--version"
+    ENV["ANSIBLE_REMOTE_TEMP"] = testpath/"tmp"
+    (testpath/"playbook.yml").write <<-EOF.undent
+      ---
+      - hosts: all
+        gather_facts: False
+        tasks:
+        - name: ping
+          ping:
+    EOF
+    (testpath/"hosts.ini").write("localhost ansible_connection=local\n")
+    system bin/"ansible-playbook", testpath/"playbook.yml", "-i", testpath/"hosts.ini"
   end
 end
